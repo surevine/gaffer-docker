@@ -14,9 +14,9 @@
 # limitations under the License.
 ##########################################################
 
-FROM cybermaggedon/accumulo
+FROM cybermaggedon/accumulo:1.8.0d
 
-RUN dnf install -y unzip
+RUN dnf install -y unzip gettext
 
 WORKDIR /usr/local
 COPY wildfly-10.1.0.CR1.zip /usr/local/
@@ -28,10 +28,16 @@ COPY product/*.war standalone/deployments/
 COPY product/*.jar /usr/local/accumulo/lib/ext/
 COPY resources/standalone.xml standalone/configuration/
 COPY resources/schema schema
-COPY resources/store.properties store.properties
+COPY resources/store.properties store.properties.template
+
+RUN mv /start-accumulo /start-accumulo-tmp && \
+    head -n -5 /start-accumulo-tmp >/start-accumulo && \
+    chmod +x /start-accumulo
 
 CMD cd /; /start-accumulo; \
-    cd /usr/local/wildfly; bin/standalone.sh -Dgaffer.schemas=/usr/local/wildfly/schema -Dgaffer.storeProperties=/usr/local/wildfly/store.properties; \
+    cd /usr/local/wildfly; \
+    envsubst <store.properties.template >store.properties; \
+    bin/standalone.sh -Dgaffer.schemas=/usr/local/wildfly/schema -Dgaffer.storeProperties=/usr/local/wildfly/store.properties; \
     /bin/bash
 
 EXPOSE 8080
